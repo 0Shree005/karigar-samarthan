@@ -25,8 +25,8 @@ class LanguageSelectionPage extends StatelessWidget {
               Text(
                 'Choose your preferred language',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
+                      color: Theme.of(context).colorScheme.secondary,
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),

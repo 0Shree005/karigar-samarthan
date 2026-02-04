@@ -5,6 +5,16 @@ import 'pages/language_selection_page.dart';
 import 'pages/add_product_wizard_page.dart';
 import 'pages/edit_products_page.dart';
 import 'pages/my_orders_page.dart';
+import 'pages/onboarding_volume_page.dart';
+import 'pages/language_confirm_page.dart';
+import 'pages/add_product_intro_page.dart';
+import 'pages/product_review_page.dart';
+import 'pages/product_published_page.dart';
+import 'pages/delete_product_confirm_page.dart';
+import 'pages/order_details_page.dart';
+import 'pages/account_overview_page.dart';
+import 'pages/help_popup.dart';
+import 'pages/network_error_page.dart';
 
 /// GoRouter configuration for app navigation
 ///
@@ -52,6 +62,51 @@ class AppRouter {
         name: 'myOrders',
         pageBuilder: (context, state) =>
             NoTransitionPage(child: const MyOrdersPage()),
+      ),
+      GoRoute(
+        path: '/volume-check',
+        pageBuilder: (_, __) =>
+            NoTransitionPage(child: const OnboardingVolumePage()),
+      ),
+      GoRoute(
+        path: '/language-confirm',
+        pageBuilder: (_, __) =>
+            NoTransitionPage(child: const LanguageConfirmPage()),
+      ),
+      GoRoute(
+        path: '/add-product-intro',
+        pageBuilder: (_, __) =>
+            NoTransitionPage(child: const AddProductIntroPage()),
+      ),
+      GoRoute(
+        path: '/product-review',
+        pageBuilder: (_, __) =>
+            NoTransitionPage(child: const ProductReviewPage()),
+      ),
+      GoRoute(
+        path: '/product-published',
+        pageBuilder: (_, __) =>
+            NoTransitionPage(child: const ProductPublishedPage()),
+      ),
+      GoRoute(
+        path: '/delete-confirm',
+        pageBuilder: (_, __) =>
+            NoTransitionPage(child: const DeleteProductConfirmPage()),
+      ),
+      GoRoute(
+        path: '/order-details',
+        pageBuilder: (_, __) =>
+            NoTransitionPage(child: const OrderDetailsPage()),
+      ),
+      GoRoute(
+        path: '/account',
+        pageBuilder: (_, __) =>
+            NoTransitionPage(child: const AccountOverviewPage()),
+      ),
+      GoRoute(
+        path: '/network-error',
+        pageBuilder: (_, __) =>
+            NoTransitionPage(child: const NetworkErrorPage()),
       ),
     ],
   );
