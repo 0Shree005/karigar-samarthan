@@ -1,14 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../nav.dart';
+import '../providers/app_state.dart';
 import '../components/action_card.dart';
 import '../components/voice_button.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+class _HomePageState extends State<HomePage> {
+  final FlutterTts _tts = FlutterTts();
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _speech.initialize();
+  }
+
+  Future<void> _speak(String text, String locale) async {
+    await _tts.setLanguage(locale);
+    await _tts.speak(text);
+  }
+
+  void _listen(String locale) async {
+    if (!_isListening) {
+      bool available = await _speech.initialize();
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          localeId: locale,
+          onResult: (val) {
+            if (val.finalResult) {
+              final command = val.recognizedWords.toLowerCase();
+              _handleCommand(command, locale);
+            }
+          },
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
+
+  bool _hasWord(List<String> words, String text) {
+    return words.any((w) => text.contains(w));
+  }
+
+  void _showHelp(String locale) {
+    final helpText = locale.startsWith("hi")
+        ? "आप कह सकते हैं: नया उत्पाद, मेरे आदेश, या प्रोफाइल"
+        : "You can say: Add product, My orders, or Open profile.";
+    _speak(helpText, locale);
+  }
+
+  void _handleCommand(String command, String locale) {
+    final addWords = ["add", "create", "new", "upload", "जोड़", "नया"];
+    final orderWords = ["order", "orders", "ऑर्डर", "आदेश"];
+    final editWords = ["edit", "change", "update", "बदल", "सुधार"];
+    final accountWords = ["account", "profile", "खाता", "प्रोफाइल"];
+    final helpWords = ["help", "commands", "मदद", "क्या बोलूं"];
+
+    if (_hasWord(addWords, command)) {
+      _navigateTo(AppRoutes.addProduct, locale.startsWith("hi") ? "नया उत्पाद" : "Opening add product", locale);
+    } else if (_hasWord(orderWords, command)) {
+      _navigateTo(AppRoutes.myOrders, locale.startsWith("hi") ? "आपके आदेश" : "Opening orders", locale);
+    } else if (_hasWord(editWords, command)) {
+      _navigateTo(AppRoutes.editProducts, locale.startsWith("hi") ? "बदलाव करें" : "Opening editor", locale);
+    } else if (_hasWord(accountWords, command)) {
+      _navigateTo(AppRoutes.languageSelection, locale.startsWith("hi") ? "आपका खाता" : "Opening account", locale);
+    } else if (_hasWord(helpWords, command)) {
+      _showHelp(locale);
+    } else {
+      _speak(locale.startsWith("hi") ? "समझ नहीं आया" : "I didn't catch that", locale);
+    }
+    setState(() => _isListening = false);
+  }
+
+  void _navigateTo(String route, String feedbackText, String locale) async {
+    await _speak(feedbackText, locale);
+    await Future.delayed(const Duration(milliseconds: 600));
+    if (mounted) context.push(route);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final appState = Provider.of<AppState>(context);
+    final String currentLang = appState.selectedLang;
+    final String currentLocale = appState.locale;
+    final bool isHi = currentLang == 'Hindi';
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -21,24 +110,15 @@ class HomePage extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Namaste, Artisan',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        'What would you like to do?',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
-                      ),
+                      Text(isHi ? 'नमस्ते, कारीगर' : 'Namaste, Artisan',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(isHi ? 'बताइये, क्या मदद करूँ?' : 'What would you like to do?',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.secondary)),
                     ],
                   ),
                   const CircleAvatar(
                     radius: 24,
-                    backgroundImage: AssetImage(
-                      'assets/images/Indian_artisan_working_brown_1769327616488.jpg',
-                    ),
+                    backgroundImage: AssetImage('assets/images/Indian_artisan_working_brown_1769327616488.jpg'),
                   ),
                 ],
               ),
@@ -47,29 +127,41 @@ class HomePage extends StatelessWidget {
                 child: ListView(
                   children: [
                     ActionCard(
+                      icon: Icons.help_outline_rounded,
+                      label: isHi ? 'मदद और निर्देश' : 'Help & Commands',
+                      audioHint: isHi ? 'मदद' : 'Help',
+                      audioLabel: isHi ? 'मदद के लिए दबाएं' : 'Tap for help',
+                      color: Colors.blueGrey,
+                      onTap: () => _showHelp(currentLocale),
+                    ),
+                    ActionCard(
                       icon: Icons.person_outline,
-                      label: 'Edit My Account',
-                      audioHint: 'Edit Account',
-                      onTap: () {}, // TODO: Implement profile edit
+                      label: isHi ? 'मेरा खाता' : 'Edit My Account',
+                      audioHint: isHi ? 'खाता' : 'Account',
+                      audioLabel: isHi ? 'खाते के लिए दबाएं' : 'Tap for account',
+                      onTap: () => _navigateTo(AppRoutes.languageSelection, isHi ? "आपका खाता" : "Opening account", currentLocale),
                     ),
                     ActionCard(
                       icon: Icons.add_circle_outline,
-                      label: 'Add New Product',
-                      audioHint: 'Add Product',
+                      label: isHi ? 'नया उत्पाद जोड़ें' : 'Add New Product',
+                      audioHint: isHi ? 'खाता' : 'Account',
+                      audioLabel: isHi ? 'उत्पाद जोड़ने के लिए दबाएं' : 'Tap to add product',
                       color: Theme.of(context).colorScheme.primary,
-                      onTap: () => context.push(AppRoutes.addProduct),
+                      onTap: () => _navigateTo(AppRoutes.addProduct, isHi ? "नया उत्पाद" : "Opening add product", currentLocale),
                     ),
                     ActionCard(
                       icon: Icons.edit_note,
-                      label: 'Edit Products',
-                      audioHint: 'Edit Products',
-                      onTap: () => context.push(AppRoutes.editProducts),
+                      label: isHi ? 'सामान की जानकारी बदलें' : 'Edit Products',
+                      audioHint: isHi ? 'खाता' : 'Account',
+                      audioLabel: isHi ? 'बदलाव के लिए दबाएं' : 'Tap to edit',
+                      onTap: () => _navigateTo(AppRoutes.editProducts, isHi ? "बदलाव करें" : "Opening editor", currentLocale),
                     ),
                     ActionCard(
                       icon: Icons.shopping_bag_outlined,
-                      label: 'My Orders',
-                      audioHint: 'Check Orders',
-                      onTap: () => context.push(AppRoutes.myOrders),
+                      label: isHi ? 'आए हुए ऑर्डर' : 'My Orders',
+                      audioHint: isHi ? 'खाता' : 'Account',
+                      audioLabel: isHi ? 'ऑर्डर देखने के लिए दबाएं' : 'Tap for orders',
+                      onTap: () => _navigateTo(AppRoutes.myOrders, isHi ? "आपके आदेश" : "Opening orders", currentLocale),
                     ),
                   ],
                 ),
@@ -77,10 +169,11 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 16),
               Center(
                 child: VoiceButton(
-                  onTap: () {
-                    // Global voice command listener
-                  },
-                  label: "Speak Command",
+                  onTap: () => _listen(currentLocale),
+                  isListening: _isListening,
+                  label: _isListening
+                      ? (isHi ? "सुन रहा हूँ..." : "Listening...")
+                      : (isHi ? "बोलिए: “नया उत्पाद”" : "Try saying: “Add product”"),
                 ),
               ),
             ],
