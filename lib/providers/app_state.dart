@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/product.dart';
 
 class AppState extends ChangeNotifier {
   // Our global state variables
@@ -14,6 +15,14 @@ class AppState extends ChangeNotifier {
     _locale = localeCode;
 
     // rebuild UI on state change
+    notifyListeners();
+  }
+
+  final List<Product> _myProducts = [];
+  List<Product> get myProducts => _myProducts;
+
+  void addProduct(Product product) {
+    _myProducts.add(product);
     notifyListeners();
   }
 }

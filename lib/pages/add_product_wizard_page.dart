@@ -14,6 +14,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 // routing
 import 'package:path_provider/path_provider.dart';
 import 'package:go_router/go_router.dart';
+import '../nav.dart';
 
 // tts and stt
 import 'package:flutter_tts/flutter_tts.dart' as tts;
@@ -23,9 +24,12 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:provider/provider.dart';
 import '../providers/app_state.dart';
 
-import '../nav.dart';
+// voice ui
 import '../components/voice_button.dart';
 import '../components/audio_prompt.dart';
+
+// product JSON
+import '../models/product.dart';
 
 class AiProductResult {
   final String title;
@@ -150,7 +154,31 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
       );
       setState(() => _currentStep++);
     } else {
-      context.pop();
+      // --- SAVE LOGIC ---
+      final appState = Provider.of<AppState>(context, listen: false);
+
+      final newProduct = Product(
+        id: DateTime.now().toString(), // Temporary ID
+        name: _name,
+        category: _category,
+        description: _description,
+        price: double.tryParse(_price) ?? 0.0,
+        quantity: int.tryParse(_quantity) ?? 0,
+        imageFile: _imageFile,
+      );
+
+      // Add to global state
+      appState.addProduct(newProduct);
+
+      // Print JSON to console for your teammate to see
+      print("READY FOR BACKEND: ${jsonEncode(newProduct.toJson())}");
+
+      // Show success feedback
+      _tts.speak(appState.selectedLang == 'Hindi'
+          ? "आपका सामान जुड़ गया है"
+          : "Product added successfully");
+
+      context.go(AppRoutes.editProducts);
     }
   }
 

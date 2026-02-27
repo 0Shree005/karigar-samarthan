@@ -127,14 +127,6 @@ class _HomePageState extends State<HomePage> {
                 child: ListView(
                   children: [
                     ActionCard(
-                      icon: Icons.help_outline_rounded,
-                      label: isHi ? 'मदद और निर्देश' : 'Help & Commands',
-                      audioHint: isHi ? 'मदद' : 'Help',
-                      audioLabel: isHi ? 'मदद के लिए दबाएं' : 'Tap for help',
-                      color: Colors.blueGrey,
-                      onTap: () => _showHelp(currentLocale),
-                    ),
-                    ActionCard(
                       icon: Icons.person_outline,
                       label: isHi ? 'मेरा खाता' : 'Edit My Account',
                       audioHint: isHi ? 'खाता' : 'Account',
@@ -162,6 +154,14 @@ class _HomePageState extends State<HomePage> {
                       audioHint: isHi ? 'खाता' : 'Account',
                       audioLabel: isHi ? 'ऑर्डर देखने के लिए दबाएं' : 'Tap for orders',
                       onTap: () => _navigateTo(AppRoutes.myOrders, isHi ? "आपके आदेश" : "Opening orders", currentLocale),
+                    ),
+                    ActionCard(
+                      icon: Icons.help_outline_rounded,
+                      label: isHi ? 'मदद और निर्देश' : 'Help & Commands',
+                      audioHint: isHi ? 'मदद' : 'Help',
+                      audioLabel: isHi ? 'मदद के लिए दबाएं' : 'Tap for help',
+                      color: Colors.blueGrey,
+                      onTap: () => _showHelp(currentLocale),
                     ),
                   ],
                 ),
