@@ -1,7 +1,8 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import 'providers/app_state.dart';
 import 'theme.dart';
 import 'nav.dart';
 
@@ -31,31 +32,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // MultiProvider wraps the app to provide state to all widgets
-    // As you extend the app, use MultiProvider to wrap the app
-    // and provide state to all widgets
-    // Example:
-    // return MultiProvider(
-    //   providers: [
-    //     ChangeNotifierProvider(create: (_) => ExampleProvider()),
-    //   ],
-    //   child: MaterialApp.router(
-    //     title: 'Dreamflow Starter',
-    //     debugShowCheckedModeBanner: false,
-    //     routerConfig: AppRouter.router,
-    //   ),
-    // );
-    return MaterialApp.router(
-      title: '', // TODO (agent): Update the title of the app
-      debugShowCheckedModeBanner: false,
+    return MultiProvider(
+      providers: [
+        // This makes AppState available to every route in AppRouter
+        ChangeNotifierProvider(create: (_) => AppState()),
+      ],
+      child: MaterialApp.router(
+        title: 'Karigar Samarthan',
+        debugShowCheckedModeBanner: false,
 
-      // Theme configuration
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: ThemeMode.system,
+        // Theme configuration
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: ThemeMode.system,
 
-      // Use context.go() or context.push() to navigate to the routes.
-      routerConfig: AppRouter.router,
+        // Navigation
+        routerConfig: AppRouter.router,
+      ),
     );
   }
 }

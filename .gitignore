@@ -10,10 +10,10 @@ build/
 .env
 
 # Android
-android/.gradle/
-android/local.properties
-android/key.properties
-*.jks
+android/.gradle
+.gradle/
+**/.gradle/
+**/android/.gradle/
 
 # iOS (even if not used yet)
 ios/Pods/
