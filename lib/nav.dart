@@ -117,6 +117,7 @@ class AppRouter {
 class AppRoutes {
   static const String languageSelection = '/language-selection';
   static const String home = '/';
+  static const String account = '/account';
   static const String addProduct = '/add-product';
   static const String editProducts = '/edit-products';
   static const String myOrders = '/my-orders';

@@ -1,12 +1,28 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+// dart std lib
 import 'dart:io';
-import "package:image_picker/image_picker.dart";
-import 'dart:convert'; // Required for jsonDecode
-import 'package:google_generative_ai/google_generative_ai.dart'; // Required
-import 'package:flutter_image_compress/flutter_image_compress.dart'; // Required
-import 'package:path_provider/path_provider.dart'; // Required
+import 'dart:convert';
+
+// flutter pkgs
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+
+// images and gemini
+import "package:image_picker/image_picker.dart";
+import 'package:google_generative_ai/google_generative_ai.dart';
+
+// routing
+import 'package:path_provider/path_provider.dart';
 import 'package:go_router/go_router.dart';
+
+// tts and stt
+import 'package:flutter_tts/flutter_tts.dart' as tts;
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+
+// global state
+import 'package:provider/provider.dart';
+import '../providers/app_state.dart';
+
 import '../nav.dart';
 import '../components/voice_button.dart';
 import '../components/audio_prompt.dart';
@@ -35,6 +51,10 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
   int _currentStep = 0;
   final PageController _pageController = PageController();
   final ImagePicker _picker = ImagePicker();
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  final tts.FlutterTts _tts = tts.FlutterTts();
+  bool _isListening = false;
+  String _activeField = ""; // To track which field we are dictating
 
   final String _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
 
@@ -147,6 +167,45 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _speech.initialize();
+  }
+
+  void _listen(String fieldName) async {
+    final appState = Provider.of<AppState>(context, listen: false);
+
+    if (!_isListening) {
+      bool available = await _speech.initialize();
+      if (available) {
+        setState(() {
+          _isListening = true;
+          _activeField = fieldName;
+        });
+
+        _speech.listen(
+          localeId: appState.locale,
+          onResult: (val) {
+            setState(() {
+              String text = val.recognizedWords;
+              if (fieldName == "name") _name = text;
+              if (fieldName == "description") _description = text;
+              if (fieldName == "price") _price = text.replaceAll(RegExp(r'[^0-9]'), ''); // Keep only numbers
+              if (fieldName == "quantity") _quantity = text.replaceAll(RegExp(r'[^0-9]'), '');
+            });
+
+            if (val.finalResult) {
+              setState(() => _isListening = false);
+            }
+          },
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -295,24 +354,32 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
     );
   }
 
+  Widget _buildValueDisplay(String value, String placeholder) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        value.isEmpty ? placeholder : value,
+        style: Theme.of(context).textTheme.bodyLarge,
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
   Widget _buildNameInput() {
     return Column(
       children: [
         VoiceButton(
-          onTap: () {
-            setState(() {
-              _name = "Handcrafted Clay Pot";
-            });
-          },
-          label: "Tap to Speak Name",
+          onTap: () => _listen("name"),
+          isListening: _isListening && _activeField == "name",
+          label: _isListening && _activeField == "name" ? "Listening..." : "Tap to Speak Name",
         ),
         const SizedBox(height: 24),
-        if (_name.isNotEmpty)
-          Text(
-            _name,
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
+        _buildValueDisplay(_name, "Product Name"),
       ],
     );
   }
@@ -380,30 +447,12 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
     return Column(
       children: [
         VoiceButton(
-          onTap: () {
-            setState(() {
-              _description =
-                  "Beautiful handmade clay pot with traditional Warli painting. Perfect for home decor.";
-            });
-          },
+          onTap: () => _listen("description"),
+          isListening: _isListening && _activeField == "description",
           label: "Tap to Describe",
         ),
         const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            _description.isEmpty
-                ? "Spoken description will appear here..."
-                : _description,
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-        ),
+        _buildValueDisplay(_description, "Spoken description will appear here..."),
       ],
     );
   }
@@ -412,11 +461,8 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
     return Column(
       children: [
         VoiceButton(
-          onTap: () {
-            setState(() {
-              _price = "500";
-            });
-          },
+          onTap: () => _listen("price"),
+          isListening: _isListening && _activeField == "price",
           label: "Tap to Say Price",
         ),
         const SizedBox(height: 24),
@@ -435,19 +481,14 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
     return Column(
       children: [
         VoiceButton(
-          onTap: () {
-            setState(() {
-              _quantity = "10";
-            });
-          },
+          onTap: () => _listen("quantity"),
+          isListening: _isListening && _activeField == "quantity",
           label: "Tap to Say Quantity",
         ),
         const SizedBox(height: 24),
         Text(
           _quantity.isEmpty ? "-- units" : "$_quantity units",
-          style: Theme.of(
-            context,
-          ).textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
       ],
     );

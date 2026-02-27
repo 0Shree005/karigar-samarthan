@@ -139,7 +139,7 @@ class _HomePageState extends State<HomePage> {
                       label: isHi ? 'मेरा खाता' : 'Edit My Account',
                       audioHint: isHi ? 'खाता' : 'Account',
                       audioLabel: isHi ? 'खाते के लिए दबाएं' : 'Tap for account',
-                      onTap: () => _navigateTo(AppRoutes.languageSelection, isHi ? "आपका खाता" : "Opening account", currentLocale),
+                      onTap: () => _navigateTo(AppRoutes.account, isHi ? "आपका खाता" : "Opening account", currentLocale),
                     ),
                     ActionCard(
                       icon: Icons.add_circle_outline,
