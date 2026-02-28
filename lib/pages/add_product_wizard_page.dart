@@ -51,7 +51,29 @@ class AddProductWizardPage extends StatefulWidget {
   State<AddProductWizardPage> createState() => _AddProductWizardPageState();
 }
 
-class _AddProductWizardPageState extends State<AddProductWizardPage> {
+class _AddProductWizardPageState extends State<AddProductWizardPage>
+    with SingleTickerProviderStateMixin {
+
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _speech.initialize();
+
+    // Setup the pulsating animation
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true); // This makes it go back and forth
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose(); // Always clean up
+    super.dispose();
+  }
+
   int _currentStep = 0;
   final PageController _pageController = PageController();
   final ImagePicker _picker = ImagePicker();
@@ -72,6 +94,10 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
   String _price = "";
   String _quantity = "";
   bool _hasPhoto = false;
+  String? _aiSuggestedName;
+  String? _aiSuggestedDescription;
+  String? _aiSuggestedCategory;
+  bool _isAiDone = false;
 
 
   Future<AiProductResult?> _processAndAnalyzeImage(File originalFile) async {
@@ -127,15 +153,16 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
 
         // AUTO-FILL the form data once AI responds!
         setState(() {
-          _name = data['title'] ?? "";
-          _description = data['description'] ?? "";
-          _category = data['category'] ?? "";
+          _aiSuggestedName = data['title'];
+          _aiSuggestedDescription = data['description'];
+          _aiSuggestedCategory = data['category'];
+          _isAiDone = true; // Mark that suggestions are ready
         });
 
         return AiProductResult(
-          title: _name,
-          description: _description,
-          category: _category,
+          title: _aiSuggestedName!,
+          description: _aiSuggestedDescription!,
+          category: _aiSuggestedCategory!,
         );
       }
     } catch (e) {
@@ -192,12 +219,6 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
         _currentStep--;
       });
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _speech.initialize();
   }
 
   void _listen(String fieldName) async {
@@ -275,13 +296,11 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
                   title: "Describe your product",
                   audioText: "Describe the product details",
                   content: _buildDescriptionInput(),
-                  aiAction: "Improve Description",
                 ),
                 _buildStep(
                   title: "Set Price (₹)",
                   audioText: "Say the price in rupees",
                   content: _buildPriceInput(),
-                  aiAction: "Suggest Better Price",
                 ),
                 _buildStep(
                   title: "Quantity Available",
@@ -335,7 +354,10 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AudioPrompt(onPlay: () {}, text: audioText),
+          AudioPrompt(
+              text: audioText,
+              onPlay: () => _tts.speak(audioText)
+          ),
           const SizedBox(height: 24),
           Text(
             title,
@@ -382,15 +404,32 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
     );
   }
 
-  Widget _buildValueDisplay(String value, String placeholder) {
+  Widget _buildValueDisplay(String value, String placeholder, {bool isAiProcessing = false}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
         borderRadius: BorderRadius.circular(12),
+        border: isAiProcessing
+            ? Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.5))
+            : null,
       ),
-      child: Text(
+      child: isAiProcessing
+          ? Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 12),
+          Text("AI is generating...",
+              style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+        ],
+      )
+          : Text(
         value.isEmpty ? placeholder : value,
         style: Theme.of(context).textTheme.bodyLarge,
         textAlign: TextAlign.center,
@@ -399,16 +438,35 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
   }
 
   Widget _buildNameInput() {
-    return Column(
-      children: [
-        VoiceButton(
-          onTap: () => _listen("name"),
-          isListening: _isListening && _activeField == "name",
-          label: _isListening && _activeField == "name" ? "Listening..." : "Tap to Speak Name",
-        ),
-        const SizedBox(height: 24),
-        _buildValueDisplay(_name, "Product Name"),
-      ],
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          VoiceButton(
+            onTap: () => _listen("name"),
+            isListening: _isListening && _activeField == "name",
+            label: "Tap to Speak Name",
+          ),
+          const SizedBox(height: 20),
+          // TextField for manual editing
+          TextField(
+            controller: TextEditingController(text: _name)..selection = TextSelection.collapsed(offset: _name.length),
+            onChanged: (val) => _name = val,
+            decoration: const InputDecoration(border: OutlineInputBorder(), labelText: "Product Name"),
+          ),
+
+          // Show Suggestion if AI found something different
+          if (_aiSuggestedName != null && _aiSuggestedName != _name)
+            _buildAiSuggestion(
+              suggestion: _aiSuggestedName!,
+              onAccept: () => setState(() { _name = _aiSuggestedName!; _aiSuggestedName = null; }),
+              onReject: () => setState(() => _aiSuggestedName = null),
+            ),
+
+          // Loading state if AI is still working
+          if (!_isAiDone && _aiTask != null)
+            _buildAiThinking("crafting a name"),
+        ],
+      ),
     );
   }
 
@@ -472,20 +530,65 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
   }
 
   Widget _buildDescriptionInput() {
-    return Column(
-      children: [
-        VoiceButton(
-          onTap: () => _listen("description"),
-          isListening: _isListening && _activeField == "description",
-          label: "Tap to Describe",
-        ),
-        const SizedBox(height: 24),
-        _buildValueDisplay(_description, "Spoken description will appear here..."),
-      ],
+    final theme = Theme.of(context);
+    return SingleChildScrollView( // Added scroll just in case the keyboard pops up
+      child: Column(
+        children: [
+          VoiceButton(
+            onTap: () => _listen("description"),
+            isListening: _isListening && _activeField == "description",
+            label: "Tap to Describe",
+          ),
+          const SizedBox(height: 24),
+
+          TextField(
+            maxLines: 4, // More space for descriptions
+            controller: TextEditingController(text: _description)
+              ..selection = TextSelection.collapsed(offset: _description.length),
+            onChanged: (val) => _description = val,
+            decoration: InputDecoration(
+              border: const OutlineInputBorder(),
+              labelText: "Product Description",
+              hintText: "Enter or speak details about your item...",
+              alignLabelWithHint: true,
+              // Match system colors
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
+              ),
+            ),
+          ),
+
+          FutureBuilder(
+            future: _aiTask,
+            builder: (context, snapshot) {
+              // 1. Show pulsating "Thinking" if AI is still working
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildAiThinking("generating a description");
+              }
+
+              // 2. Show AI Suggestion if it exists and is different from current text
+              if (_isAiDone &&
+                  _aiSuggestedDescription != null &&
+                  _aiSuggestedDescription != _description) {
+                return _buildAiSuggestion(
+                  suggestion: _aiSuggestedDescription!,
+                  onAccept: () => setState(() {
+                    _description = _aiSuggestedDescription!;
+                    _aiSuggestedDescription = null;
+                  }),
+                  onReject: () => setState(() => _aiSuggestedDescription = null),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildPriceInput() {
+    final theme = Theme.of(context);
     return Column(
       children: [
         VoiceButton(
@@ -493,19 +596,45 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
           isListening: _isListening && _activeField == "price",
           label: "Tap to Say Price",
         ),
-        const SizedBox(height: 24),
-        Text(
-          _price.isEmpty ? "₹ --" : "₹ $_price",
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+        const SizedBox(height: 40),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text("₹",
+                style: theme.textTheme.displayMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold
+                )
+            ),
+            const SizedBox(width: 8),
+            IntrinsicWidth( // This makes the text field only as wide as the input
+              child: TextField(
+                keyboardType: TextInputType.number,
+                controller: TextEditingController(text: _price)
+                  ..selection = TextSelection.collapsed(offset: _price.length),
+                onChanged: (val) => setState(() => _price = val.replaceAll(RegExp(r'[^\d]'), '')),
+                style: theme.textTheme.displayMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+                decoration: InputDecoration(
+                  hintText: "--",
+                  hintStyle: TextStyle(color: theme.colorScheme.outline.withOpacity(0.3)),
+                  border: InputBorder.none, // Removes the line
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
   Widget _buildQuantityInput() {
+    final theme = Theme.of(context);
     return Column(
       children: [
         VoiceButton(
@@ -513,12 +642,112 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> {
           isListening: _isListening && _activeField == "quantity",
           label: "Tap to Say Quantity",
         ),
-        const SizedBox(height: 24),
-        Text(
-          _quantity.isEmpty ? "-- units" : "$_quantity units",
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
+        const SizedBox(height: 40),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            IntrinsicWidth(
+              child: TextField(
+                keyboardType: TextInputType.number,
+                controller: TextEditingController(text: _quantity)
+                  ..selection = TextSelection.collapsed(offset: _quantity.length),
+                onChanged: (val) => setState(() => _quantity = val.replaceAll(RegExp(r'[^\d]'), '')),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  hintText: "--",
+                  hintStyle: TextStyle(color: theme.colorScheme.outline.withOpacity(0.3)),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text("units", style: theme.textTheme.headlineMedium),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildAiSuggestion({
+    required String suggestion,
+    required VoidCallback onAccept,
+    required VoidCallback onReject,
+  }) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.secondary.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 18, color: theme.colorScheme.secondary),
+              const SizedBox(width: 8),
+              Text("AI Suggestion",
+                  style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.secondary,
+                      fontWeight: FontWeight.bold
+                  )
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(suggestion, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                  onPressed: onReject,
+                  child: Text("Discard", style: TextStyle(color: theme.colorScheme.error))
+              ),
+              ElevatedButton(
+                onPressed: onAccept,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                ),
+                child: const Text("Accept"),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiThinking(String label) {
+    final theme = Theme.of(context);
+    return FadeTransition(
+      opacity: CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.auto_awesome, size: 16, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(
+              "AI is $label for you...",
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.primary,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
