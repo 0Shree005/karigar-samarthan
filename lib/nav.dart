@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'pages/final_listing_screen.dart';
 import 'pages/home_page.dart';
 import 'pages/language_selection_page.dart';
 import 'pages/add_product_wizard_page.dart';
@@ -13,8 +14,8 @@ import 'pages/product_published_page.dart';
 import 'pages/delete_product_confirm_page.dart';
 import 'pages/order_details_page.dart';
 import 'pages/account_overview_page.dart';
-// import 'pages/help_popup.dart';
 import 'pages/network_error_page.dart';
+import '../models/product.dart';
 
 /// GoRouter configuration for app navigation
 ///
@@ -56,6 +57,17 @@ class AppRouter {
         name: 'editProducts',
         pageBuilder: (context, state) =>
             NoTransitionPage(child: const EditProductsPage()),
+      ),
+      GoRoute(
+        path: AppRoutes.productReview,
+        name: 'productReview',
+        pageBuilder: (context, state) {
+          // Extract the product from the 'extra' parameter
+          final product = state.extra as Product;
+          return NoTransitionPage(
+            child: FinalReviewPage(draftProduct: product),
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.myOrders,
@@ -120,5 +132,6 @@ class AppRoutes {
   static const String account = '/account';
   static const String addProduct = '/add-product';
   static const String editProducts = '/edit-products';
+  static const String productReview = '/product-review';
   static const String myOrders = '/my-orders';
 }

@@ -181,11 +181,9 @@ class _AddProductWizardPageState extends State<AddProductWizardPage>
       );
       setState(() => _currentStep++);
     } else {
-      // --- SAVE LOGIC ---
-      final appState = Provider.of<AppState>(context, listen: false);
-
-      final newProduct = Product(
-        id: DateTime.now().toString(), // Temporary ID
+      // 1. Create the draft product
+      final draftProduct = Product(
+        id: DateTime.now().toString(),
         name: _name,
         category: _category,
         description: _description,
@@ -194,18 +192,8 @@ class _AddProductWizardPageState extends State<AddProductWizardPage>
         imageFile: _imageFile,
       );
 
-      // Add to global state
-      appState.addProduct(newProduct);
-
-      // Print JSON to console for your teammate to see
-      print("READY FOR BACKEND: ${jsonEncode(newProduct.toJson())}");
-
-      // Show success feedback
-      _tts.speak(appState.selectedLang == 'Hindi'
-          ? "आपका सामान जुड़ गया है"
-          : "Product added successfully");
-
-      context.go(AppRoutes.editProducts);
+      // 2. Navigate and PASS the product using 'extra'
+      context.go(AppRoutes.productReview, extra: draftProduct);
     }
   }
 
@@ -288,7 +276,7 @@ class _AddProductWizardPageState extends State<AddProductWizardPage>
                   content: _buildNameInput(),
                 ),
                 _buildStep(
-                  title: "Select Category",
+                  title: "SelectCategory",
                   audioText: "Choose a category",
                   content: _buildCategoryInput(),
                 ),

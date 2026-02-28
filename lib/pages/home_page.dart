@@ -76,7 +76,7 @@ class _HomePageState extends State<HomePage> {
     } else if (_hasWord(editWords, command)) {
       _navigateTo(AppRoutes.editProducts, locale.startsWith("hi") ? "बदलाव करें" : "Opening editor", locale);
     } else if (_hasWord(accountWords, command)) {
-      _navigateTo(AppRoutes.languageSelection, locale.startsWith("hi") ? "आपका खाता" : "Opening account", locale);
+      _navigateTo(AppRoutes.account, locale.startsWith("hi") ? "आपका खाता" : "Opening account", locale);
     } else if (_hasWord(helpWords, command)) {
       _showHelp(locale);
     } else {

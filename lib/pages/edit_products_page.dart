@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart' as tts;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../nav.dart';
@@ -15,6 +16,8 @@ class EditProductsPage extends StatelessWidget {
     final appState = context.watch<AppState>();
     final products = appState.myProducts;
     final bool isHi = appState.selectedLang == 'Hindi';
+    final tts.FlutterTts _tts = tts.FlutterTts();
+
 
     return Scaffold(
       appBar: AppBar(
@@ -26,7 +29,7 @@ class EditProductsPage extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: AudioPrompt(
               onPlay: () {
-                // You could add TTS here to read out the count
+                _tts.speak(isHi ? "बदलाव के लिए सामान चुनें" : "Select a product to edit");
               },
               text: isHi ? "बदलाव के लिए सामान चुनें" : "Select a product to edit",
             ),
@@ -130,7 +133,10 @@ class _ProductCard extends StatelessWidget {
             ),
             IconButton(
               icon: const Icon(Icons.edit_outlined),
-              onPressed: () {},
+              onPressed: () {
+                // This sends the SPECIFIC product to the review page
+                context.push(AppRoutes.productReview, extra: product);
+              },
             ),
             const SizedBox(width: 8),
           ],

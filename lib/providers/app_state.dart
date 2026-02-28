@@ -25,4 +25,25 @@ class AppState extends ChangeNotifier {
     _myProducts.add(product);
     notifyListeners();
   }
+
+  void updateProduct(Product updatedProduct) {
+    final index = _myProducts.indexWhere((p) => p.id == updatedProduct.id);
+    if (index != -1) {
+      _myProducts[index] = updatedProduct;
+      notifyListeners();
+    }
+  }
+
+  void addOrUpdateProduct(Product product) {
+    final index = _myProducts.indexWhere((p) => p.id == product.id);
+
+    if (index != -1) {
+      // If it exists, replace it
+      _myProducts[index] = product;
+    } else {
+      // If it's new, add it
+      _myProducts.add(product);
+    }
+    notifyListeners();
+  }
 }
