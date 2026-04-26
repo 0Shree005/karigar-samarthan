@@ -20,12 +20,11 @@ class MyOrdersPage extends StatelessWidget {
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(16),
-              children: [
+              children: const [
                 _OrderCard(
                   orderId: "#ORD-001",
                   productName: "Handcrafted Clay Pot",
-                  image:
-                      "assets/images/Handmade_pottery_brown_1769327617453.jpg",
+                  image: "assets/images/Handmade_pottery_brown_1769327617453.jpg",
                   status: "New Order",
                   statusColor: Colors.blue,
                   date: "Today, 10:30 AM",
@@ -33,8 +32,7 @@ class MyOrdersPage extends StatelessWidget {
                 _OrderCard(
                   orderId: "#ORD-002",
                   productName: "Silk Saree",
-                  image:
-                      "assets/images/Handloom_saree_textle_red_1769327618321.jpg",
+                  image: "assets/images/Handloom_saree_textle_red_1769327618321.jpg",
                   status: "Packed",
                   statusColor: Colors.orange,
                   date: "Yesterday",
@@ -42,8 +40,7 @@ class MyOrdersPage extends StatelessWidget {
                 _OrderCard(
                   orderId: "#ORD-003",
                   productName: "Wooden Toy",
-                  image:
-                      "assets/images/Wooden_handicraft_brown_1769327620084.jpg",
+                  image: "assets/images/Wooden_handicraft_brown_1769327620084.jpg",
                   status: "Shipped",
                   statusColor: Colors.green,
                   date: "2 Days Ago",

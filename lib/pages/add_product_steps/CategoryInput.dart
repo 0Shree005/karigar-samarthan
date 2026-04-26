@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 
 class CategoryInput extends StatelessWidget {
-  final String selectedCategory;
-  final Function(String) onCategorySelected;
+  final int? selectedCategoryId;
+  final Function(int) onCategorySelected;
 
   const CategoryInput({
     super.key,
-    required this.selectedCategory,
+    required this.selectedCategoryId,
     required this.onCategorySelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    final categories = [
-      {'icon': Icons.brush, 'label': 'Pottery'},
-      {'icon': Icons.checkroom, 'label': 'Textiles'},
-      {'icon': Icons.diamond, 'label': 'Jewelry'},
-      {'icon': Icons.chair, 'label': 'Woodwork'},
-    ];
+  final categories = [
+    {'icon': Icons.brush, 'label': 'Ceramics', 'id': 306}, // Matches "Ceramics"
+    {'icon': Icons.checkroom, 'label': 'Textiles', 'id': 278}, // Matches "Dupattas/Textiles"
+    {'icon': Icons.shopping_bag, 'label': 'Bags', 'id': 276}, // Matches "Bags"
+    {'icon': Icons.chair, 'label': 'Home Decor', 'id': 282}, // Matches "Home Decor"
+  ];
 
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -29,11 +29,11 @@ class CategoryInput extends StatelessWidget {
       itemCount: categories.length,
       itemBuilder: (context, index) {
         final cat = categories[index];
-        final label = cat['label'] as String;
-        final isSelected = selectedCategory == label;
+        final id = cat['id'] as int;
+        final isSelected = selectedCategoryId == id;
 
         return InkWell(
-          onTap: () => onCategorySelected(label),
+          onTap: () => onCategorySelected(id),
           child: Container(
             decoration: BoxDecoration(
               color: isSelected
@@ -58,7 +58,7 @@ class CategoryInput extends StatelessWidget {
                       : Theme.of(context).colorScheme.onSurface,
                 ),
                 const SizedBox(height: 8),
-                Text(label, style: Theme.of(context).textTheme.titleMedium),
+                Text(cat['label'] as String, style: Theme.of(context).textTheme.titleMedium),
               ],
             ),
           ),

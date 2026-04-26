@@ -12,6 +12,7 @@ import '../models/product.dart';
 
 // Steps & Service
 import 'ai_service.dart';
+import 'API/woocommerce_service.dart';
 import 'add_product_steps/PhotoInput.dart';
 import 'add_product_steps/NameInput.dart';
 import 'add_product_steps/CategoryInput.dart';
@@ -38,6 +39,7 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> with Single
   // Form Data
   File? _imageFile;
   String _name = "", _category = "", _description = "", _price = "", _quantity = "";
+  int? _selectedCategoryId;
   String? _aiSuggestedName, _aiSuggestedDescription, _aiSuggestedCategory;
   bool _isAiDone = false;
   Future<AiProductResult?>? _aiTask;
@@ -55,21 +57,55 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> with Single
     super.dispose();
   }
 
-  void _nextStep() {
+  void _nextStep() async {
     if (_currentStep < 5) {
       _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       setState(() => _currentStep++);
     } else {
-      final draftProduct = Product(
-        id: DateTime.now().toString(),
-        name: _name,
-        category: _category,
-        description: _description,
-        price: double.tryParse(_price) ?? 0.0,
-        quantity: int.tryParse(_quantity) ?? 0,
-        imageFile: _imageFile,
+      final service = WooCommerceService();
+      
+      // 1. Show loading
+      showDialog(
+        context: context, 
+        barrierDismissible: false, 
+        builder: (_) => const AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text("Uploading product and photo..."),
+            ],
+          ),
+        )
       );
-      context.go(AppRoutes.productReview, extra: draftProduct);
+
+      int? uploadedImageId;
+
+      // 2. Upload Image first if it exists
+      if (_imageFile != null) {
+        uploadedImageId = await service.uploadImage(_imageFile!);
+      }
+
+      // 3. Push Product with the image ID
+      bool success = await service.pushProduct(
+        name: _name,
+        description: _description,
+        price: _price,
+        categoryId: _selectedCategoryId ?? 256,
+        imageId: uploadedImageId, // Pass the ID here!
+        karigarName: "test_karigar", // You can pull this from AppState later
+      );
+
+      Navigator.pop(context); // Close dialog
+
+      if (success) {
+        context.go('/product-published');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Upload failed. Please check internet."))
+        );
+      }
     }
   }
 
@@ -139,19 +175,19 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> with Single
     onImagePicked: (file) {
       setState(() { 
         _imageFile = file; 
-        _isAiDone = false; 
-        _aiTask = AiService.processAndAnalyzeImage(file); 
+        _isAiDone = true; // Disable AI suggestions for TESTING
+        // _aiTask = AiService.processAndAnalyzeImage(file); 
       });
-      _aiTask!.then((res) {
-        if (res != null && mounted) {
-          setState(() { 
-            _aiSuggestedName = res.title; 
-            _aiSuggestedDescription = res.description; 
-            _aiSuggestedCategory = res.category; 
-            _isAiDone = true; 
-          });
-        }
-      });
+      // _aiTask!.then((res) {
+      //   if (res != null && mounted) {
+      //     setState(() { 
+      //       _aiSuggestedName = res.title; 
+      //       _aiSuggestedDescription = res.description; 
+      //       _aiSuggestedCategory = res.category; 
+      //       _isAiDone = true; 
+      //     });
+      //   }
+      // });
       _nextStep();
     },
   );
@@ -170,8 +206,8 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> with Single
   );
 
   Widget _stepCategory() => CategoryInput(
-    selectedCategory: _category,
-    onCategorySelected: (cat) => setState(() => _category = cat),
+    selectedCategoryId: _selectedCategoryId, 
+    onCategorySelected: (id) => setState(() => _selectedCategoryId = id)
   );
 
   Widget _stepDescription() => DescInput(
