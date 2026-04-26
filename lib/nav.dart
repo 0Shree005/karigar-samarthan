@@ -96,8 +96,9 @@ class AppRouter {
       ),
       GoRoute(
         path: '/product-published',
-        pageBuilder: (_, __) =>
-            NoTransitionPage(child: const ProductPublishedPage()),
+        builder: (context, state) => ProductPublishedPage(
+          productUrl: state.extra as String?, // Pass the string from the wizard
+        ),
       ),
       GoRoute(
         path: '/delete-confirm',

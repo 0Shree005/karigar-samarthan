@@ -61,12 +61,14 @@ class WooCommerceService {
   }
 
   // Pushes the product to the website
-Future<bool> pushProduct({
+// lib/pages/API/woocommerce_service.dart
+
+  Future<String?> pushProduct({
     required String name,
     required String description,
     required String price,
     required int categoryId,
-    int? imageId, // New parameter
+    int? imageId,
     String? karigarName,
   }) async {
     try {
@@ -75,30 +77,30 @@ Future<bool> pushProduct({
         "type": "simple",
         "regular_price": price,
         "description": description,
-        "status": "pending",
+        "status": "publish", // CHANGE: Products go live immediately!
         "categories": [{"id": categoryId}],
         "meta_data": [
           {"key": "_ks_karigar_name", "value": karigarName ?? "App User"},
-          {"key": "_ks_needs_review", "value": "yes"},
+          // Removed "_ks_needs_review" as it's no longer mandatory for the app
           {"key": "_created_via", "value": "Karigar-Samarthan-Flutter"}
         ],
       };
 
-      // If we have an image ID, attach it!
       if (imageId != null) {
-        productData["images"] = [
-          {"id": imageId}
-        ];
+        productData["images"] = [{"id": imageId}];
       }
 
       final response = await _dio.post("products", data: productData);
-      return response.statusCode == 201;
+    
+      if (response.statusCode == 201) {
+        return response.data['permalink']; 
+      }
     } catch (e) {
       print("❌ PUSH ERR: $e");
-      return false;
     }
+    return null;
   }
-  
+    
   // Helper to fetch all categories dynamically
   Future<List<dynamic>> getCategories() async {
     try {

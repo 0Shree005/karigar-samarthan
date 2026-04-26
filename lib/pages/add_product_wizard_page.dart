@@ -88,7 +88,7 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> with Single
       }
 
       // 3. Push Product with the image ID
-      bool success = await service.pushProduct(
+      String? permalink = await service.pushProduct(
         name: _name,
         description: _description,
         price: _price,
@@ -99,8 +99,8 @@ class _AddProductWizardPageState extends State<AddProductWizardPage> with Single
 
       Navigator.pop(context); // Close dialog
 
-      if (success) {
-        context.go('/product-published');
+      if (permalink != null) {
+        context.go('/product-published', extra: permalink);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Upload failed. Please check internet."))
